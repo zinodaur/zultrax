@@ -157,10 +157,12 @@ class Frame
                 for entity in @map
                         entity.updateInput(events, mousex, mousey)
                         entity.run(elapsedTime)
+
                         @writeToCollisionMap(entity)
 
                 for entity in @map
                         if entity.collisionType is DYNAMIC and entity.alive
+                                console.log(entity.id+': velocity+')
                                 partner = @doesCollide(entity)
                                 if partner isnt false
                                         @collide(entity, partner)
