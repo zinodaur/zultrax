@@ -67,19 +67,20 @@
     };
 
     Game.prototype.loadGraphics = function() {
-      var i, _i, _results;
-      this.graphics['resources/warrior1_0-test-01.png'] = new Image();
-      this.graphics['resources/warrior1_0-test-01.png'].src = 'resources/warrior1_0-test-01.png';
-      this.graphics['resources/jswars_gfx/asteroid.png'] = new Image();
-      this.graphics['resources/jswars_gfx/asteroid.png'].src = 'resources/jswars_gfx/asteroid.png';
+      var i, url, _i, _results;
+      url = 'http://raw.github.com/zinodaur/zultrax/master/';
+      this.graphics['resources/player-ship.png'] = new Image();
+      this.graphics['resources/player-ship.png'].src = url + 'resources/player-ship.png';
+      this.graphics['resources/asteroid.png'] = new Image();
+      this.graphics['resources/asteroid.png'].src = url + 'resources/asteroid.png';
       this.graphics['resources/background_1.png'] = new Image();
-      this.graphics['resources/background_1.png'].src = 'resources/background_1.png';
-      this.graphics['resources/gems2-15.png'] = new Image();
-      this.graphics['resources/gems2-15.png'].src = 'resources/gems2-15.png';
+      this.graphics['resources/background_1.png'].src = url + 'resources/background_1.png';
+      this.graphics['resources/wall-tile.png'] = new Image();
+      this.graphics['resources/wall-tile.png'].src = url + 'resources/wall-tile.png';
       _results = [];
       for (i = _i = 0; _i <= 7; i = ++_i) {
-        this.graphics['resources/shieldAnimation/pwr02test2-' + i + '.png'] = new Image();
-        _results.push(this.graphics['resources/shieldAnimation/pwr02test2-' + i + '.png'].src = 'resources/shieldAnimation/pwr02test2-' + i + '.png');
+        this.graphics['resources/shieldAnimation/shield-' + i + '.png'] = new Image();
+        _results.push(this.graphics['resources/shieldAnimation/shield-' + i + '.png'].src = url + 'resources/shieldAnimation/shield-' + i + '.png');
       }
       return _results;
     };
@@ -288,7 +289,7 @@
     };
 
     Frame.prototype.physicalCollide = function(partner1, partner2) {
-      var circle, dog, newVelX1, newVelX2, newVelY1, newVelY2, printCoords, rect, xdist, ydist;
+      var circle, d, dog, nx, ny, p, printCoords, rect, xdist, ydist;
       if (partner1.hitboxType === NON_PHYSICAL || partner2.hitboxType === NON_PHYSICAL) {
         return dog = 1;
       } else if (partner1.hitboxType === RECTANGLE || partner2.hitboxType === RECTANGLE) {
@@ -367,18 +368,31 @@
         printCoords(partner1);
         console.log(partner2.id + 'VEL-precollision: (' + partner2.xVelocity + ' ,' + partner2.yVelocity + ')');
         printCoords(partner2);
-        "                        console.log('************************************COLLISION--HAPPENS***********************************')                        d = partner1.radius + partner2.radius #THIS LINE IS POTENTIAL DEBUG POINT                        nx = (partner2.x - partner1.x)/d                        ny = (partner2.y - partner1.y)/d                        p = 2*(partner1.xVelocity*nx + partner1.yVelocity*ny - partner2.xVelocity*nx - partner2.yVelocity*ny)/(partner1.mass + partner2.mass)                        partner1.xVelocity = partner1.xVelocity - p*partner2.mass*nx                        partner1.yVelocity = partner1.yVelocity - p*partner2.mass*ny                        partner2.xVelocity = partner2.xVelocity + p*partner1.mass*nx                        partner2.yVelocity = partner2.yVelocity + p*partner1.mass*ny                        ";
+        console.log('************************************COLLISION--HAPPENS***********************************');
+        d = partner1.radius + partner2.radius;
+        nx = (partner2.x - partner1.x) / d;
+        ny = (partner2.y - partner1.y) / d;
+        p = 2 * (partner1.xVelocity * nx + partner1.yVelocity * ny - partner2.xVelocity * nx - partner2.yVelocity * ny) / (partner1.mass + partner2.mass);
+        partner1.xVelocity = partner1.xVelocity - p * partner2.mass * nx;
+        partner1.yVelocity = partner1.yVelocity - p * partner2.mass * ny;
+        partner2.xVelocity = partner2.xVelocity + p * partner1.mass * nx;
+        partner2.yVelocity = partner2.yVelocity + p * partner1.mass * ny;
+        '\
+                        newVelX1 = (partner1.xVelocity * (partner1.mass - partner2.mass) + (2 * partner2.mass * partner2.xVelocity)) / (partner1.mass + partner2.mass)\
+                        newVelY1 = (partner1.yVelocity * (partner1.mass - partner2.mass) + (2 * partner2.mass * partner2.yVelocity)) / (partner1.mass + partner2.mass)\
+                        newVelX2 = (partner2.xVelocity * (partner2.mass - partner1.mass) + (2 * partner1.mass * partner1.xVelocity)) / (partner1.mass + partner2.mass)\
+                        newVelY2 = (partner2.yVelocity * (partner2.mass - partner1.mass) + (2 * partner1.mass * partner1.yVelocity)) / (partner1.mass + partner2.mass)\
+\
+\
+                        partner1.physics(-2)\
+                        partner2.physics(-2)\
+\
+                        partner1.xVelocity = newVelX1\
+                        partner2.yVelocity = newVelY1\
+                        partner1.xVelocity = newVelX2\
+                        partner2.yVelocity = newVelY2\
+                        ';
 
-        newVelX1 = (partner1.xVelocity * (partner1.mass - partner2.mass) + (2 * partner2.mass * partner2.xVelocity)) / (partner1.mass + partner2.mass);
-        newVelY1 = (partner1.yVelocity * (partner1.mass - partner2.mass) + (2 * partner2.mass * partner2.yVelocity)) / (partner1.mass + partner2.mass);
-        newVelX2 = (partner2.xVelocity * (partner2.mass - partner1.mass) + (2 * partner1.mass * partner1.xVelocity)) / (partner1.mass + partner2.mass);
-        newVelY2 = (partner2.yVelocity * (partner2.mass - partner1.mass) + (2 * partner1.mass * partner1.yVelocity)) / (partner1.mass + partner2.mass);
-        partner1.physics(-2);
-        partner2.physics(-2);
-        partner1.xVelocity = newVelX1;
-        partner2.yVelocity = newVelY1;
-        partner1.xVelocity = newVelX2;
-        partner2.yVelocity = newVelY2;
         '\
                         partner1.x += partner1.xVelocity\
                         partner1.y += partner1.yVelocity\
@@ -469,7 +483,7 @@
       Wall.__super__.constructor.call(this, _map, _id, _graphics, _x, _y);
       this.hitboxType = RECTANGLE;
       this.operatorLevel = NON_OPERATOR;
-      this.image = this.graphics['resources/gems2-15.png'];
+      this.image = this.graphics['resources/wall-tile.png'];
     }
 
     Wall.prototype.draw = function(context) {
@@ -578,7 +592,7 @@
       this.animation = new PlayerAnimation(this, this.graphics, this.x, this.y);
       this.imageCentreX = 27;
       this.imageCentreY = 30;
-      this.image = this.graphics['resources/warrior1_0-test-01.png'];
+      this.image = this.graphics['resources/player-ship.png'];
     }
 
     Player.prototype.updateInput = function(events, _mousex, _mousey) {
@@ -799,7 +813,7 @@
       if (this.animateShield) {
         console.log('Sheild is animated!');
         context.globalAlpha = 0.5;
-        context.drawImage(this.graphics['resources/shieldAnimation/pwr02test2-' + this.shieldImageIndex + '.png'], this.player.x - this.player.radius * 1.26, this.player.y - this.player.radius * 1.26, imgWidth = 1.26 * this.player.radius * 2, imgHeight = 1.26 * this.player.radius * 2);
+        context.drawImage(this.graphics['resources/shieldAnimation/shield-' + this.shieldImageIndex + '.png'], this.player.x - this.player.radius * 1.26, this.player.y - this.player.radius * 1.26, imgWidth = 1.26 * this.player.radius * 2, imgHeight = 1.26 * this.player.radius * 2);
         context.globalAlpha = 1;
         if (this.shieldImageIndexMax === this.shieldImageIndex) {
           this.shieldImageIndex = 0;
