@@ -87,25 +87,25 @@ class Game
 
 
         loadGraphics: () ->
+                url = 'http://raw.github.com/zinodaur/zultrax/master/'
+                @graphics['resources/player-ship.png'] = new Image()
+                @graphics['resources/player-ship.png'].src = url+'resources/player-ship.png'
 
-                @graphics['resources/warrior1_0-test-01.png'] = new Image()
-                @graphics['resources/warrior1_0-test-01.png'].src = 'resources/warrior1_0-test-01.png'
 
-
-                @graphics['resources/jswars_gfx/asteroid.png'] = new Image()
-                @graphics['resources/jswars_gfx/asteroid.png'].src = 'resources/jswars_gfx/asteroid.png'
+                @graphics['resources/asteroid.png'] = new Image()
+                @graphics['resources/asteroid.png'].src = url+'resources/asteroid.png'
 
 
                 @graphics['resources/background_1.png'] = new Image()
-                @graphics['resources/background_1.png'].src = 'resources/background_1.png'
+                @graphics['resources/background_1.png'].src = url+'resources/background_1.png'
 
-                @graphics['resources/gems2-15.png'] = new Image()
-                @graphics['resources/gems2-15.png'].src = 'resources/gems2-15.png'
+                @graphics['resources/wall-tile.png'] = new Image()
+                @graphics['resources/wall-tile.png'].src = url + 'resources/wall-tile.png'
 
 
                 for i in [0..7]
-                        @graphics['resources/shieldAnimation/pwr02test2-'+i+'.png'] = new Image()
-                        @graphics['resources/shieldAnimation/pwr02test2-'+i+'.png'].src = 'resources/shieldAnimation/pwr02test2-'+i+'.png'
+                        @graphics['resources/shieldAnimation/shield-'+i+'.png'] = new Image()
+                        @graphics['resources/shieldAnimation/shield-'+i+'.png'].src = url+'resources/shieldAnimation/shield-'+i+'.png'
 
                 #@loadIntervalId = setInterval("window.game.loadProgress()", 200)
 
@@ -372,12 +372,13 @@ class Frame
 
                         #TODO: instead of just going back in velocity, call physics with -1 elapsedtime. That way, if the object was decelerating when it was moving into
                         # collision, it will completely clear the collision (which theoretically will sometimes be an issue with current system)
+                        '
                         partner1.x -= partner1.xVelocity
                         partner1.y -= partner1.yVelocity
 
                         partner2.x -= partner2.xVelocity
                         partner2.y -= partner2.yVelocity
-
+                        '
                         printCoords = (entity) -> console.log(entity.id+' :('+entity.x+', '+entity.y+')')
                         #The math for determining the collision response for two colliding circles.
                         console.log(partner1.id+'VEL-precollision: ('+partner1.xVelocity+' ,'+partner1.yVelocity+')')
@@ -402,11 +403,17 @@ class Frame
                         newVelY1 = (partner1.yVelocity * (partner1.mass - partner2.mass) + (2 * partner2.mass * partner2.yVelocity)) / (partner1.mass + partner2.mass)
                         newVelX2 = (partner2.xVelocity * (partner2.mass - partner1.mass) + (2 * partner1.mass * partner1.xVelocity)) / (partner1.mass + partner2.mass)
                         newVelY2 = (partner2.yVelocity * (partner2.mass - partner1.mass) + (2 * partner1.mass * partner1.yVelocity)) / (partner1.mass + partner2.mass)
+
+
+                        partner1.physics(-2)
+                        partner2.physics(-2)
+
                         partner1.xVelocity = newVelX1
                         partner2.yVelocity = newVelY1
                         partner1.xVelocity = newVelX2
                         partner2.yVelocity = newVelY2
                         '
+
 
                         '
                         partner1.x += partner1.xVelocity
@@ -474,7 +481,7 @@ class Wall extends Entity
 
                 @hitboxType = RECTANGLE
                 @operatorLevel = NON_OPERATOR
-                @image = @graphics['resources/gems2-15.png']
+                @image = @graphics['resources/wall-tile.png']
 
         draw: (context) ->
                 context.drawImage(@image, @x-@halfWidth, @y-@halfHeight, 2*@halfWidth, 2*@halfHeight)
@@ -580,7 +587,7 @@ class Player extends Mobile
                 @animation = new PlayerAnimation(this, @graphics, @x, @y)
                 @imageCentreX = 27#@radius
                 @imageCentreY = 30 #@radius
-                @image = @graphics['resources/warrior1_0-test-01.png']
+                @image = @graphics['resources/player-ship.png']
 
         #updateInput: (listof Events), Num, Num-> void
         # Called once per tick, gives event and mouse coordinate information
@@ -842,7 +849,7 @@ class PlayerAnimation
                 if @animateShield
                         console.log('Sheild is animated!')
                         context.globalAlpha = 0.5
-                        context.drawImage(@graphics['resources/shieldAnimation/pwr02test2-'+@shieldImageIndex+'.png'],
+                        context.drawImage(@graphics['resources/shieldAnimation/shield-'+@shieldImageIndex+'.png'],
                                 @player.x - @player.radius*1.26, @player.y - @player.radius*1.26, imgWidth = 1.26*@player.radius*2, imgHeight = 1.26*@player.radius*2)
                         context.globalAlpha = 1
                         if @shieldImageIndexMax is @shieldImageIndex
