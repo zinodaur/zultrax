@@ -761,7 +761,7 @@
       this.operatorLevel = NON_OPERATOR;
       this.hitboxType = CIRCLE;
       this.collisionType = DYNAMIC;
-      this.image = this.graphics['resources/jswars_gfx/asteroid.png'];
+      this.image = this.graphics['resources/asteroid.png'];
       this.imageCentreX = 1.5 * this.radius;
       this.imageCentreY = 1.5 * this.radius;
       this.health = 15;

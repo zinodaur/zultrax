@@ -791,7 +791,7 @@ class Asteroid extends Mobile
                 @operatorLevel = NON_OPERATOR
                 @hitboxType = CIRCLE
                 @collisionType = DYNAMIC
-                @image = @graphics['resources/jswars_gfx/asteroid.png']
+                @image = @graphics['resources/asteroid.png']
                 @imageCentreX = 1.5*@radius
                 @imageCentreY = 1.5*@radius
                 @health = 15
