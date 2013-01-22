@@ -1,5 +1,4 @@
-
-
+# Zultrax.coffee
 
 #Constant definitions
 
@@ -9,11 +8,9 @@ KEY_UP_ARROW = 38
 KEY_DOWN_ARROW = 40
 KEY_LEFT_SHIFT = 16
 
-
 #Collision type
 STATIC = 0
 DYNAMIC = 1
-
 
 # Hitbox types - corresponds to the shape
 # that is checked for collision against other
@@ -21,8 +18,6 @@ DYNAMIC = 1
 NON_PHYSICAL = 0
 RECTANGLE = 1
 CIRCLE = 2
-
-
 
 #   Collision reaction types: When two shapes collide, the reactions
 # are either uniformly determined (ie, a basic physical collision), or
