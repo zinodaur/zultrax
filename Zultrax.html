@@ -1,0 +1,51 @@
+<html>
+<head>
+  <script type="text/javascript" src="http://raw.github.com/zinodaur/zultrax/master/resources/js/jquery-1.9.0.js"></script>
+  <script src="http://raw.github.com/zinodaur/zultrax/master/resources/js/Zultrax.js"></script>
+  <script>
+    $(document).ready(function() { 
+    window.startGame ($("canvas").get (0));
+    });
+   
+  </script>
+</head>
+
+<body>
+  
+  <canvas id="canvas" width="1000" height="500"></canvas>
+  
+
+
+    <script> 
+    $('#canvas').mousemove(function(e) {
+    
+    var x = e.pageX;
+    var y = e.pageY;
+    window.game.mousex = x;
+    window.game.mousey = y;
+    
+    });
+    
+ $(document.body).on('keydown', function(e) {
+    if (e.keyCode < 105){
+		    
+		    window.game.events.push(e)
+		    console.log(e.type);
+		    }
+    
+           
+});
+
+ $(document.body).on('keyup', function(e) {
+    if (e.keyCode < 105){
+		    
+		    window.game.events.push(e);
+		    }
+    
+           
+});
+
+  </script>
+  
+</body>
+</html>
