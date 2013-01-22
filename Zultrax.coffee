@@ -1,11 +1,4 @@
-#printblock1
 
-
-#TODO: redo these in a non-retarded way
-pointWithin = (x, xa, xb) -> (x>xa and x<xb)
-
-pointInRect = (x1, y1, rectx, recty, halfrectwid, halfrectlen)->
-               rectx-halfrectwid < x1 < (rectx + halfrectwid) and recty-halfrectlen < y1 < (recty + halfrectlen)
 
 
 #Constant definitions
@@ -71,6 +64,8 @@ class Game
                 @loadingComplete = false
                 @loadIntervalId = setInterval("window.game.init()", 200)
 
+
+        init: () ->
 
         #Purpose: Core loop, runs the game physics
         run: () ->
@@ -704,7 +699,7 @@ class Player extends Mobile
         # player-specific scripts for gameplay
         run: (elapsedTime) ->
 
-                #console.log("Run is being called, ("+@x+" ,"+@y+")")
+
                 dist = Math.sqrt(Math.pow(@x-@mousex, 2) + Math.pow(@y-@mousey, 2))
                 @directionX = (@mousex - @x)/dist
                 @directionY = (@mousey - @y)/dist
@@ -757,7 +752,6 @@ class Player extends Mobile
                 @animation.draw(context)
 
         hasCollided: (partner) ->
-                console.log(partner.id)
                 #TODO: generalize this
                 if partner.id is 'asteroid'
                         @damage(0.5)
@@ -808,7 +802,7 @@ class Asteroid extends Mobile
 
 
         run: (elapsedTime) ->
-                #When the asteroid dies, it splits into asteroid-children
+                # When the asteroid dies, it splits into asteroid-children
                 # TODO: randomize the size, number and speeds of the children
                 if @health < 1
                         @alive = false
@@ -847,7 +841,7 @@ class PlayerAnimation
         draw: (context) ->
                 #14yoffset 68 centre
                    if @animateShield
-                        console.log('Sheild is animated!')
+
                         context.globalAlpha = 0.5
                         context.drawImage(@graphics['resources/shieldAnimation/shield-'+@shieldImageIndex+'.png'],
                                 @player.x - @player.radius*1.26, @player.y - @player.radius*1.26, imgWidth = 1.26*@player.radius*2, imgHeight = 1.26*@player.radius*2)
@@ -909,6 +903,11 @@ class Missile extends Mobile
 
                 @physics(elapsedTime)
 
+
+pointWithin = (x, xa, xb) -> (x>xa and x<xb)
+
+pointInRect = (x1, y1, rectx, recty, halfrectwid, halfrectlen)->
+               rectx-halfrectwid < x1 < (rectx + halfrectwid) and recty-halfrectlen < y1 < (recty + halfrectlen)
 
 
 # TEMPORARY: this whole section is temporary implementation of the game for
