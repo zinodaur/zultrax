@@ -342,21 +342,12 @@ class Frame
                 else if partner1.hitboxType is CIRCLE and partner2.hitboxType is CIRCLE
 
 
-
-
                         # Much of the math for circle-circle collisions has been adapted from
                         # http://ericleong.me/research/circle-circle
                         # Written by: Eric Leong
 
 
-
-                        #First, we must correct the position of the circles
-                        # We do this by finding the midpoint between the two
-                        # circle centres, and adjusting the circles along this vector
-                        # by equal amounts so that they are no longer overlapping
-
-
-
+                        # Computing post-collision velocities
 
                         d = partner1.radius + partner2.radius
                         nx = (partner2.x - partner1.x)/d
@@ -378,7 +369,9 @@ class Frame
                         partner2.x += newVelX2*2
                         partner2.y += newVelY2*2
 
-                        # Adjusts the computed velocities for emulated entropy
+                        # Adjusts the computed velocities for energy bleed
+                        # (without this, after a long period of play,
+                        # the asteroids can get too excited)
                         partner1.xVelocity = newVelX1*dampeningFactor
                         partner1.yVelocity = newVelY1*dampeningFactor
                         partner2.xVelocity = newVelX2*dampeningFactor
