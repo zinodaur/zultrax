@@ -3,8 +3,7 @@
 
 #TODO: redo these in a non-retarded way
 pointWithin = (x, xa, xb) -> (x>xa and x<xb)
-#pointInRect = (x1, y1, rectx, recty, halfrectwid, halfrectlen)->
- #               x1 > rectx-halfrectwid and x1 < (rectx + halfrectwid) and y1 > recty-halfrectlen and y1 < (recty + halfrectlen)
+
 pointInRect = (x1, y1, rectx, recty, halfrectwid, halfrectlen)->
                rectx-halfrectwid < x1 < (rectx + halfrectwid) and recty-halfrectlen < y1 < (recty + halfrectlen)
 
@@ -23,66 +22,63 @@ STATIC = 0
 DYNAMIC = 1
 
 
-#Hitbox types
+# Hitbox types - corresponds to the shape
+# that is checked for collision against other
+# nearby shapes
 NON_PHYSICAL = 0
 RECTANGLE = 1
 CIRCLE = 2
 
 
-#Maybe I sh
-#Collision reaction types
 
-NON_OPERATOR = 0 #Something that collides using standard physics based methods
+#   Collision reaction types: When two shapes collide, the reactions
+# are either uniformly determined (ie, a basic physical collision), or
+# one party has precedence, and handles the collision in a dynamic, scripted way.
+#
+#   Although two constants are defined here, the operator level has no cap, so
+# new operators can always be added without their custom scripts being interfered with
 
-OPERATOR = 1 #Something that operates on objects in dynamic ways - ie, a bullet or a missile,
+NON_OPERATOR = 0
+OPERATOR = 1
 
 
-
+# The main class, containing all the frames (play fields) that make up the world.
+# Game is responsible for loading resources, initializing the world and handling
+# user input
 class Game
         constructor: (@canvas) ->
                 @context = @canvas.getContext("2d")
-                #the object that the game is focused on (determines which cell is rendered, etc)
-                @viewFocus = 0
+
+                # Mouse coordinates set by external event handlers,
+                # passed to the frames to be destributed to the world
                 @mousex = 0
                 @mousey = 0
+
+                # A list of events accumulated in the dormant phase,
+                # passed to active frames and then depleted
                 @events = []
 
-                @screenHeight = 1
-                @screenWidth = 1
                 #The set of all the frames (play fields) contained within the game
                 @frames = []
 
+                # The graphics object, containing all image resources
+                # used by the world (loaded before the world begins)
                 @graphics = {}
                 @loadGraphics()
+
+                # Variables used for resource loading and initialization
                 @loadIntervalId = null
-
                 @loadingComplete = false
-
-
-                #3d array containing a grid of game cells, and each cell is a list of objects it contains
-                #@cells = [] for cell in [0...@worldHeight] for column in [0...@worldWidth]
-
-
-        init: () ->
-
+                @loadIntervalId = setInterval("window.game.init()", 200)
 
 
         #Purpose: Core loop, runs the game physics
         run: () ->
 
-
-                #console.log("game tick")
                 frame.run(1, @context, @events, @mousex, @mousey) for frame in @frames when frame.active
 
                 #empties the event que after all the objects have had the chance to see them
                 @events = []
-
-
-
-
-
-
-
 
 
 
@@ -107,37 +103,46 @@ class Game
                         @graphics['resources/shieldAnimation/shield-'+i+'.png'] = new Image()
                         @graphics['resources/shieldAnimation/shield-'+i+'.png'].src = url+'resources/shieldAnimation/shield-'+i+'.png'
 
-                #@loadIntervalId = setInterval("window.game.loadProgress()", 200)
+
 
         loadProgress: () ->
                 @loadingComplete = true
-                for src, image of @graphics
-                        if not image.complete
-                                @loadingComplete = false
+                @loadingComplete = false for key, image of @graphics when not image.complete
 
 
 
-#Frame objects are contained within game and have their own coordinate system
+# Frame objects are contained within game and have their own coordinate system
 # All frames operate on the same core set of principles, but each frame can have
 # different scripts that run each cycle and alter the world for the purpose of game mechanics.
 class Frame
         constructor: (@width, @height, @graphics) ->
-                @player = 0
-                @map = []
-                @collisionCellSidelength = 10
+
                 @active = false
+
+                @player = null
+
+                # The array containing all the objects within the frame
+                @map = []
+
+                # Variables used for broad-phase collision detection system
+                # (fast-to-compute shape approximations for determining when
+                # a collision is likely)
+                @collisionMap = []
+                @collisionCellSidelength = 10
                 @collisionMapWidth =Math.floor(@width/@collisionCellSidelength)
                 @collisionMapHeight = Math.floor(@height/@collisionCellSidelength)
-                @collisionMap = []
+
+                # Variable used for generating unique IDs
                 @idCount = 0
 
                 @background = @graphics['resources/background_1.png']
 
 
-        # Draws the background and other non-denominational (menus etc)
+        # Draws the background and other non-denominational
         # things to the screen
         draw: (context) ->
                 context.drawImage(@background, 0, 0, @width, @height)
+
         #newId: void -> string
         # produces a unique (for a give frame) string to be used as an ID
         newId: () ->
@@ -146,29 +151,23 @@ class Frame
 
         #Runs the core features of the Frame (drawing the map, game mechanics, running frame-specific scripts)
         run: (elapsedTime, context, events, mousex, mousey) ->
+                @simulateWorld(elapsedTime, context, events, mousex, mousey)
 
-                #add another function for custom code
+        simulateWorld: (elapsedTime, context, events, mousex, mousey) ->
                 @collisionMap = ([] for cell in [0...@collisionMapHeight] for column in [0...@collisionMapWidth])
-                #console.log(@collisionMap.length)
-
-
 
 
                 for entity in @map
                         entity.updateInput(events, mousex, mousey)
                         entity.run(elapsedTime)
-
                         @writeToCollisionMap(entity)
 
                 for entity in @map
                         if entity.collisionType is DYNAMIC and entity.alive
-                                console.log(entity.id+': velocity+')
                                 partner = @doesCollide(entity)
                                 if partner isnt false
                                         @collide(entity, partner)
 
-                #TODO: why does this sometimes produce an error?
-                #@map.splice(@map.indexOf(entity), 1) for entity in @map when not entity.alive
 
                 #Removes entities in the map that are marked as dead
                 splices = 0
@@ -182,7 +181,8 @@ class Frame
                 @draw(context)
                 entity.draw(context) for entity in @map
 
-        #writeToCollisionMap: Entity -> void
+
+        # writeToCollisionMap: Entity -> void
         # Writes the general silhouette (called a hitfield) of the entity to the
         # collision map, which is used for broad phase collision detection
         # (ie, narrowing the number of expensive collision detection calls that
@@ -206,7 +206,8 @@ class Frame
                                         if 0 < x < @collisionMapWidth and 0 < y < @collisionMapHeight
                                                 @collisionMap[x][y].push(entity)
 
-        #doesCollide: Entity -> (union False Entity)
+
+        # doesCollide: Entity -> (union False Entity)
         # Does this entity collide? If so, who does it collide with?
         doesCollide: (entity) ->
 
@@ -230,6 +231,7 @@ class Frame
                 #if none of the other partners are a match, return false
                 return false
 
+
         #doesCollideWith: Entity, Entity -> Boolean
         # Does this entity collide with this partner?
         # Narrow phase collision detection, expensive,
@@ -251,7 +253,8 @@ class Frame
                         d = partnerPointInRect(entity.x, entity.y-entity.radius)
                         sqRadius = Math.pow(entity.radius, 2)
                         e = sqRadius > squareDist(entity.x, entity.y, partner.x+partner.halfWidth, partner.y - partner.halfHeight) or sqRadius > squareDist(entity.x, entity.y, partner.x-partner.halfWidth, partner.y - partner.halfHeight) or  sqRadius > squareDist(entity.x, entity.y, partner.x+partner.halfWidth, partner.y + partner.halfHeight) or sqRadius > squareDist(entity.x, entity.y, partner.x-partner.halfWidth, partner.y + partner.halfHeight)
-                        #This is BAAAAAAAAD. Fix it bitch.
+
+                        #TODO: make this if clause more graceful
                         return a or b or c or d or e
 
                 else if partner.hitboxType is CIRCLE
@@ -264,9 +267,10 @@ class Frame
                         return d < r
 
 
-        #collision: Entity Entity -> void
+        # collision: Entity Entity -> void
         # Determines the effects of collision on two collision partners
         collide: (partner1, partner2) ->
+
                 #TODO: more concise ordering and logic
                 if partner1.operatorLevel is 0 and partner2.operatorLevel is 0
                         @physicalCollide(partner1, partner2)
@@ -278,18 +282,18 @@ class Frame
                 else if partner2.operatorLevel > partner1.operatorLevel
                         partner2.collide(partner1)
 
-
+                # Notifies each partner that they have participated in a collision
                 partner1.hasCollided(partner2)
                 partner2.hasCollided(partner1)
+
 
         #physicalCollide: Entity Entity -> void
         # Collides two physical bodies.
         physicalCollide: (partner1, partner2) ->
-                if partner1.hitboxType is NON_PHYSICAL or partner2.hitboxType is NON_PHYSICAL
-                        #TODO: WTF?
-                        dog = 1
+                #Variable used for collision dampening
+                dampeningFactor = 0.5
 
-                else if partner1.hitboxType is RECTANGLE or partner2.hitboxType is RECTANGLE
+                if partner1.hitboxType is RECTANGLE or partner2.hitboxType is RECTANGLE
 
                         #do collision for circle vs rectangle (rectangles can't move, so one partner must be a circle)
                         if partner1.hitboxType is RECTANGLE
@@ -310,43 +314,46 @@ class Frame
                                         #top right quadrant
 
                                         if xdist < ydist
-                                                circle.yVelocity = -circle.yVelocity
+                                                circle.yVelocity = -circle.yVelocity*dampeningFactor
                                                 circle.y=rect.y+rect.halfHeight+circle.radius
                                         else
-                                                circle.xVelocity = -circle.xVelocity
+                                                circle.xVelocity = -circle.xVelocity*dampeningFactor
                                                 circle.x=rect.x+rect.halfWidth+circle.radius
                                 else
                                         #bottom right quadrant
 
                                         if xdist < ydist
-                                                circle.yVelocity = -circle.yVelocity
+                                                circle.yVelocity = -circle.yVelocity*dampeningFactor
                                                 circle.y=rect.y-rect.halfHeight-circle.radius
                                         else
-                                                circle.xVelocity = -circle.xVelocity
+                                                circle.xVelocity = -circle.xVelocity*dampeningFactor
                                                 circle.x=rect.x+rect.halfWidth+circle.radius
                         else
                                 if circle.y > rect.y
                                         #top left quadrant
 
                                         if xdist < ydist
-                                                circle.yVelocity = -circle.yVelocity
+                                                circle.yVelocity = -circle.yVelocity*dampeningFactor
                                                 circle.y=rect.y+rect.halfHeight+circle.radius
                                         else
-                                                circle.xVelocity = -circle.xVelocity
+                                                circle.xVelocity = -circle.xVelocity*dampeningFactor
                                                 circle.x=rect.x-rect.halfWidth-circle.radius
                                 else
                                         #bottom left quadrant
 
                                         if xdist < ydist
-                                                circle.yVelocity = -circle.yVelocity
+                                                circle.yVelocity = -circle.yVelocity*dampeningFactor
                                                 circle.y=rect.y-rect.halfHeight-circle.radius
                                         else
-                                                circle.xVelocity = -circle.xVelocity
+                                                circle.xVelocity = -circle.xVelocity*dampeningFactor
                                                 circle.x=rect.x-rect.halfWidth-circle.radius
 
 
                 else if partner1.hitboxType is CIRCLE and partner2.hitboxType is CIRCLE
-                        console.log('circle on circle collision')
+
+
+
+
                         # Much of the math for circle-circle collisions has been adapted from
                         # http://ericleong.me/research/circle-circle
                         # Written by: Eric Leong
@@ -357,75 +364,38 @@ class Frame
                         # We do this by finding the midpoint between the two
                         # circle centres, and adjusting the circles along this vector
                         # by equal amounts so that they are no longer overlapping
-                        '
-                        midpointx = (partner1.x + partner2.x)/2
-                        midpointy = (partner1.y + partner2.y)/2
-                        dist = Math.sqrt(Math.pow(partner1.x-partner2.x, 2) + Math.pow(partner1.y-partner2.y, 2))
-                        newx = midpointx + partner1.radius * (partner1.x - partner2.x)/dist
-                        newy = midpointy + partner1.radius * (partner1.y - partner2.y)/dist
-                        partner2.x = midpointx + partner2.radius * (partner2.x - partner1.x)/dist #Debug here and below as well, are the state changes intentional?
-                        partner2.y = midpointy + partner2.radius * (partner2.y - partner1.y)/dist
-                        partner1.x = newx
-                        partner1.y = newy
-                        '
 
 
-                        #TODO: instead of just going back in velocity, call physics with -1 elapsedtime. That way, if the object was decelerating when it was moving into
-                        # collision, it will completely clear the collision (which theoretically will sometimes be an issue with current system)
-                        '
-                        partner1.x -= partner1.xVelocity
-                        partner1.y -= partner1.yVelocity
-
-                        partner2.x -= partner2.xVelocity
-                        partner2.y -= partner2.yVelocity
-                        '
-                        printCoords = (entity) -> console.log(entity.id+' :('+entity.x+', '+entity.y+')')
-                        #The math for determining the collision response for two colliding circles.
-                        console.log(partner1.id+'VEL-precollision: ('+partner1.xVelocity+' ,'+partner1.yVelocity+')')
-                        printCoords(partner1)
-                        console.log(partner2.id+'VEL-precollision: ('+partner2.xVelocity+' ,'+partner2.yVelocity+')')
-                        printCoords(partner2)
 
 
-                        console.log('************************************COLLISION--HAPPENS***********************************')
-                        d = partner1.radius + partner2.radius #THIS LINE IS POTENTIAL DEBUG POINT
+                        d = partner1.radius + partner2.radius
                         nx = (partner2.x - partner1.x)/d
                         ny = (partner2.y - partner1.y)/d
                         p = 2*(partner1.xVelocity*nx + partner1.yVelocity*ny - partner2.xVelocity*nx - partner2.yVelocity*ny)/(partner1.mass + partner2.mass)
-                        partner1.xVelocity = partner1.xVelocity - p*partner2.mass*nx
-                        partner1.yVelocity = partner1.yVelocity - p*partner2.mass*ny
-                        partner2.xVelocity = partner2.xVelocity + p*partner1.mass*nx
-                        partner2.yVelocity = partner2.yVelocity + p*partner1.mass*ny
+                        newVelX1 = partner1.xVelocity - p*partner2.mass*nx
+                        newVelY1 = partner1.yVelocity - p*partner2.mass*ny
+                        newVelX2 = partner2.xVelocity + p*partner1.mass*nx
+                        newVelY2 = partner2.yVelocity + p*partner1.mass*ny
+
+                        # Adjusting the position of both partners so that
+                        # they are no longer in collision
+
+                        # TODO: This works 99% of the time, but sometimes they are projected
+                        # into other objects. Implement a brute force method whereby the objects
+                        # are repositioned regardless of their path, only when the first method doesn't succeed
+                        partner1.x += newVelX1*2
+                        partner1.y += newVelY1*2
+                        partner2.x += newVelX2*2
+                        partner2.y += newVelY2*2
+
+                        # Adjusts the computed velocities for emulated entropy
+                        partner1.xVelocity = newVelX1*dampeningFactor
+                        partner1.yVelocity = newVelY1*dampeningFactor
+                        partner2.xVelocity = newVelX2*dampeningFactor
+                        partner2.yVelocity = newVelY2*dampeningFactor
 
 
-                        '
-                        newVelX1 = (partner1.xVelocity * (partner1.mass - partner2.mass) + (2 * partner2.mass * partner2.xVelocity)) / (partner1.mass + partner2.mass)
-                        newVelY1 = (partner1.yVelocity * (partner1.mass - partner2.mass) + (2 * partner2.mass * partner2.yVelocity)) / (partner1.mass + partner2.mass)
-                        newVelX2 = (partner2.xVelocity * (partner2.mass - partner1.mass) + (2 * partner1.mass * partner1.xVelocity)) / (partner1.mass + partner2.mass)
-                        newVelY2 = (partner2.yVelocity * (partner2.mass - partner1.mass) + (2 * partner1.mass * partner1.yVelocity)) / (partner1.mass + partner2.mass)
-
-
-                        partner1.physics(-2)
-                        partner2.physics(-2)
-
-                        partner1.xVelocity = newVelX1
-                        partner2.yVelocity = newVelY1
-                        partner1.xVelocity = newVelX2
-                        partner2.yVelocity = newVelY2
-                        '
-
-
-                        '
-                        partner1.x += partner1.xVelocity
-                        partner1.y += partner1.yVelocity
-                        partner2.x += partner2.xVelocity
-                        partner2.y += partner2.yVelocity
-                        '
-                        console.log(partner1.id+'VEL-postcollision: ('+partner1.xVelocity+' ,'+partner1.yVelocity+')')
-                        printCoords(partner1)
-                        console.log(partner2.id+'VEL-postcollision: ('+partner2.xVelocity+' ,'+partner2.yVelocity+')')
-                        printCoords(partner2)
-
+# A basic walled frame (something that almost every frame will have)
 class BasicFrame extends Frame
         constructor: (_width, _height, _graphics) ->
                 super(_width, _height, _graphics)
@@ -440,8 +410,9 @@ class BasicFrame extends Frame
                         @map.push(new Wall(@map, @newId(), @graphics, 0+0.5*@wallWidth, y*@wallHeight+ 0.5*@wallHeight, 0.5*@wallWidth, 0.5*@wallHeight))
                         @map.push(new Wall(@map, @newId(), @graphics, @width-0.5*@wallWidth, y*@wallHeight+ 0.5*@wallHeight, 0.5*@wallWidth, 0.5*@wallHeight))
 
+
 #entity = new Entity(Number, Number)
-#Basic class that describes a physical entity, must at the very least have a position
+#Basic, abstract class that describes a physical entity
 class Entity
         constructor: (@map, @id, @graphics, @x, @y) ->
                 @hitboxType = NON_PHYSICAL
@@ -450,6 +421,8 @@ class Entity
                 @alive = true
                 @idCount = 0
                 @health = 1
+
+                # Information used for rendering basic sprites
                 @imageCentreX = 0
                 @imageCentreY = 0
 
@@ -458,20 +431,30 @@ class Entity
 
         draw: (context) ->
 
+
+        # Called when the Entity has a higher operator level than the
+        # other entity it is colliding with
         collide: (partner) ->
 
+
+        # Called after a collision, regardless of who handled it
         hasCollided: (partner) ->
 
+
+        # Calculates damages and damage reaction
         damage: () ->
+
 
         updateInput: (events, mousex, mousey) ->
 
-        #Produces a new, unique (within the frame) id
+
+        # Produces a new, unique (within the frame) id
         newId: () ->
                 @idCount++
                 return @id+":"+String(@idCount)
 
-        run: () ->
+
+        run: (elapsedTime) ->
 
 
 
@@ -490,17 +473,29 @@ class Wall extends Entity
 
 
 
-#a portal = new Portal(Num, Num, Num, (union Portal false), Frame, Num, Num)
+# a portal = new Portal(Num, Num, Num, (union Portal false), Frame, Num, Num)
+# Used for transporting the player from one Frame to another. A portal is always paired
+# with another portal in another frame, and passes the player object between the frames.
 class Portal extends Entity
-        constructor: (_map, _id, _graphics, _x, _y, @exit, @frame, @halfWidth, @halfHeight) ->
+        constructor: (_map, _id, _graphics, _x, _y, _exit, _frame, @halfWidth, @halfHeight) ->
                 super(_map, _id, _graphics, _x, _y)
                 @hitboxType = RECTANGLE
                 @operatorLevel = OPERATOR
+
+                # The coordinates within the local frame at which
+                # to spawn an incoming player
                 @spawnx = 0
                 @spawny = 0
 
+                # The paired portal that the player is sent to upon
+                # collision
+                @exit = _exit
+
+                # The local frame
+                @frame = _frame
+
+
         collide: (partner) ->
-                console.log('portal collide!')
                 if partner.id is 'player'
                         @exit.receivePlayer(partner)
                         @frame.active = false
@@ -513,15 +508,16 @@ class Portal extends Entity
                 @frame.map.push(player)
                 @frame.active = true
 
+
         draw: (context) ->
                 context.fillRect(@x-@halfWidth,@y-@halfHeight,2*@halfWidth,2*@halfHeight)
 
-#mobile = new Mobile(Number, Number, Number, Number)
+
+# mobile = new Mobile(Number, Number, Number, Number)
 # A class that serves as the basis for all things that move, and occupy a circular space
 class Mobile extends Entity
         constructor: (_map, _id, _graphics, _x, _y, _radius, _mass, _xVelocity, _yVelocity) ->
                 super(_map, _id, _graphics, _x, _y)
-                #CAREFUL HERE, ABOUT MAP, DO I REALLY WANT THIS?
 
                 @hitboxType = CIRCLE
                 @collisionType = DYNAMIC
@@ -540,7 +536,7 @@ class Mobile extends Entity
 
 
 
-        #physics: Number -> void
+        # physics: Number -> void
         # Simulates physics for the elapsed time period
         physics: (elapsedTime) ->
                 @xAcceleration = @xForce/@mass
@@ -563,13 +559,14 @@ class Mobile extends Entity
 
 
 
-        #collide: Entity -> void
+        # collide: Entity -> void
         # Consumes the collision partner, and computes all the collision physics
         collide: (partner) ->
-                console.log('handling collide when i shouldnt be')
 
-        #run: Number -> void
-        # Called by the update loop on game, performs core state manipulations on the mobile
+
+        # run: Number -> void
+        # Called by the update loop on game, performs core state manipulations on the mobile,
+        # opportunity for scripting
         run: (elapsedTime) ->
                 @physics(elapsedTime)
 
@@ -580,16 +577,21 @@ class Player extends Mobile
                 super(_map, _id, _graphics, _x, _y, _radius, _mass= 1, _xVelocity=0, _yVelocity=0)
                 @mousex = 0
                 @mousey = 0
+
+                # Various triggers used for event-related scripting
                 @thrustForward = false
                 @thrustBackward = false
                 @fire = false
 
+                # Animation object, handles animation of the player
                 @animation = new PlayerAnimation(this, @graphics, @x, @y)
+
+                # Simple sprite information (not handled by animation object)
                 @imageCentreX = 27#@radius
                 @imageCentreY = 30 #@radius
                 @image = @graphics['resources/player-ship.png']
 
-        #updateInput: (listof Events), Num, Num-> void
+        # updateInput: (listof Events), Num, Num-> void
         # Called once per tick, gives event and mouse coordinate information
         updateInput:(events, _mousex, _mousey) ->
                 #Obviously unpacking will be abstracted, this is just for testing
@@ -597,6 +599,7 @@ class Player extends Mobile
                 @mousey = _mousey
                 @processEvent(event) for event in events
 
+        # Creates a bullet object with a set velocity in a given direction
         fireBullet: (fireDirectionX, fireDirectionY) ->
                 bulletspeed = 10
                 bulletradius = 5
@@ -613,6 +616,8 @@ class Player extends Mobile
                         _yVelocity = @yVelocity + fireDirectionY*bulletspeed))
 
 
+        # Creates two missile objects, with initial velocities perpendicular
+        # to the current direction of the player
         fireMissiles: (destinationX, destinationY) ->
                 initialThrust = 2
                 missile1radius = 5
@@ -656,6 +661,7 @@ class Player extends Mobile
 
 
                 @map.push(missile1, missile2)
+
 
         #processEvent: Event -> Void
         # consumes an event object, determines its type
@@ -757,7 +763,7 @@ class Player extends Mobile
                         @damage(0.5)
 
 
-
+# Fires in a straight line until it collides, where it imparts damage
 class Bullet extends Mobile
         constructor:(_map, _id, _graphics, _x, _y, _radius, _mass, _xVelocity, _yVelocity) ->
                 super(_map, _id, _graphics, _x, _y, _radius, _mass, _xVelocity, _yVelocity)
@@ -823,12 +829,6 @@ class Asteroid extends Mobile
         damage: (damageTaken) ->
                 @health -= damageTaken
 
-#NOTES
-#15 stars
-#1920 vertical res
-# 128 horizontal
-# crop 128*128
-
 
 #The class containing all the logic for the complex player animations
 # TODO: abstract the animation systems
@@ -846,7 +846,7 @@ class PlayerAnimation
 
         draw: (context) ->
                 #14yoffset 68 centre
-                if @animateShield
+                   if @animateShield
                         console.log('Sheild is animated!')
                         context.globalAlpha = 0.5
                         context.drawImage(@graphics['resources/shieldAnimation/shield-'+@shieldImageIndex+'.png'],
@@ -895,7 +895,8 @@ class Missile extends Mobile
                 context.arc(@x, @y, @radius, 0, 2*Math.PI, true)
                 context.fill()
 
-
+        # Moves towards a Destination point by applying
+        # force (thrust) in that direction
         run: (elapsedTime) ->
                 dist = Math.sqrt(Math.pow(@destinationX-@x, 2) + Math.pow(@destinationY-@.y, 2))
                 if dist < 20
@@ -910,43 +911,19 @@ class Missile extends Mobile
 
 
 
-
-class testWall extends Entity
-        constructor: (_map, _id, _graphics, _x, _y, @halfWidth, @halfHeight) ->
-                super(_map, _id, _graphics, _x, _y)
-
-                @hitboxType = RECTANGLE
-        draw: (context) ->
-                context.fillRect(@x-@halfWidth,@y-@halfHeight,2*@halfWidth,2*@halfHeight)
-        run: (elapsedTime) ->
-#Manually fill entity list
-#Manually set map in mobiles as entitylist in game
-
-
-
+# TEMPORARY: this whole section is temporary implementation of the game for
+# debugging and experimentation purposes
 start = (canvas) ->
-        #console.info "I started!"
-        #setInterval(function(){(new Game canvas 100 100).run()}, 50)
+
         window.game = new Game(canvas)
 
         window.game.frames.push(new BasicFrame(1000, 500, window.game.graphics))
-        #window.game.frames.push(new Frame(1000, 1000, 'graphics'))
+
         window.game.frames[0].active = true
         window.game.frames[0].map.push(new Asteroid(window.game.frames[0].map, 'asteroid', window.game.graphics, 300, 300, 30, 1, 0, 0))
-        #window.game.frames[0].map.push(new testSphere(window.game.frames[0].map, 'circle2', 'graphics',600, 200, 20))
-
-        #window.game.frames[0].map[1].id = 'Circle2'
-        #window.game.frames[0].map[1].xVelocity = 1
-        #window.game.frames[0].map[1].yVelocity = 1
-        #window.game.frames[0].map[0].xVelocity = -1
-        #window.game.frames[0].map[0].yVelocity = -1
-
-        #window.game.frames[1].map.push(new Portal(window.game.frames[0].map, 'portal2', 'graphics', 1000, 300, false, window.game.frames[1], 40, 40))
-        #window.game.frames[0].map.push(new Portal(window.game.frames[0].map, 'portal1', 'graphics', 1000, 100, window.game.frames[1].map[0], window.game.frames[0], 40, 40))
-
 
         window.game.frames[0].map.push(new Player(window.game.frames[0].map, 'player', window.game.graphics, 200, 200, 40))
-        #window.game.frames[0].map.push(new Wall(window.game.frames[0].map, 'wall', window.game.graphics, 300, 250, 50, 50))
+
 
         setInterval("window.game.run()", 20)
 
