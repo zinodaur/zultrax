@@ -57,7 +57,7 @@ class Game
                 # Variables used for resource loading and initialization
                 @loadIntervalId = null
                 @loadingComplete = false
-                @loadIntervalId = setInterval("window.game.init()", 200)
+                #@loadIntervalId = setInterval("window.game.init()", 200)
 
 
         init: () ->
@@ -73,7 +73,8 @@ class Game
 
 
         loadGraphics: () ->
-                url = 'http://raw.github.com/zinodaur/zultrax/master/'
+                #url = 'http://raw.github.com/zinodaur/zultrax/master/'
+                url = ''
                 @graphics['resources/player-ship.png'] = new Image()
                 @graphics['resources/player-ship.png'].src = url+'resources/player-ship.png'
 
@@ -159,14 +160,9 @@ class Frame
                                         @collide(entity, partner)
 
 
-                #Removes entities in the map that are marked as dead
-                splices = 0
-                for i in [0...@map.length]
-                        if i < @map.length - splices
-                                if not @map[i].alive
-                                        @map.splice(i, 1)
-                                        i-=1
-                                        splices++
+
+                #Removes dead entities from the map
+                @map = (entity for entity in @map when entity.alive)
 
                 @draw(context)
                 entity.draw(context) for entity in @map
@@ -281,6 +277,7 @@ class Frame
         # Collides two physical bodies.
         physicalCollide: (partner1, partner2) ->
                 #Variable used for collision dampening
+                # TODO: make dampening factor for mobile collisions scale with mass.
                 dampeningFactor = 0.5
 
                 if partner1.hitboxType is RECTANGLE or partner2.hitboxType is RECTANGLE
@@ -339,6 +336,7 @@ class Frame
                                                 circle.x=rect.x-rect.halfWidth-circle.radius
 
 
+
                 else if partner1.hitboxType is CIRCLE and partner2.hitboxType is CIRCLE
 
 
@@ -364,10 +362,36 @@ class Frame
                         # TODO: This works 99% of the time, but sometimes they are projected
                         # into other objects. Implement a brute force method whereby the objects
                         # are repositioned regardless of their path, only when the first method doesn't succeed
-                        partner1.x += newVelX1*2
-                        partner1.y += newVelY1*2
-                        partner2.x += newVelX2*2
-                        partner2.y += newVelY2*2
+                        #
+                        #
+
+                        partner1.physics(-1)
+                        partner2.physics(-1)
+
+
+
+
+
+                        # If they STILL collide, despite our best efforts to make them convincingly escape
+                        # each other, take drastic steps
+                        if @doesCollideWith(partner1, partner2)
+                                #Panic collision is what is precipitating the screwiness. Still good to have,
+                                # I need to build the rectangle-circle-circle collision
+
+
+                                # Finds the vectors between the circle centres, projects one of the circles
+                                # along that axis to the point where they no longer intersect
+
+                                dist = Math.sqrt(Math.pow(partner1.x-partner2.x, 2) + Math.pow(partner1.y-partner2.y, 2))
+                                projectionx = (partner1.x - partner2.x)/dist
+                                projectiony = (partner1.y - partner2.y)/dist
+
+
+                                magnitude = (partner1.radius + partner2.radius) - dist
+
+                                partner2.x += projectionx*magnitude
+                                partner2.y += projectiony*magnitude
+
 
                         # Adjusts the computed velocities for energy bleed
                         # (without this, after a long period of play,
@@ -679,7 +703,7 @@ class Player extends Mobile
 
 
         damage: (damageTaken) ->
-                @animation.animateShield = true
+
 
 
 
@@ -740,9 +764,11 @@ class Player extends Mobile
                 @animation.draw(context)
 
         hasCollided: (partner) ->
+                @animation.animateShield = true
                 #TODO: generalize this
                 if partner.id is 'asteroid'
                         @damage(0.5)
+
 
 
 # Fires in a straight line until it collides, where it imparts damage
