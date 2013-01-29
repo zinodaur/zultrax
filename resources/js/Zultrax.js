@@ -4,14 +4,6 @@
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
-  pointWithin = function(x, xa, xb) {
-    return x > xa && x < xb;
-  };
-
-  pointInRect = function(x1, y1, rectx, recty, halfrectwid, halfrectlen) {
-    return (rectx - halfrectwid < x1 && x1 < (rectx + halfrectwid)) && (recty - halfrectlen < y1 && y1 < (recty + halfrectlen));
-  };
-
   KEY_SPACE = 32;
 
   KEY_UP_ARROW = 38;
@@ -47,8 +39,9 @@
       this.loadGraphics();
       this.loadIntervalId = null;
       this.loadingComplete = false;
-      this.loadIntervalId = setInterval("window.game.init()", 200);
     }
+
+    Game.prototype.init = function() {};
 
     Game.prototype.run = function() {
       var frame, _i, _len, _ref;
@@ -64,7 +57,7 @@
 
     Game.prototype.loadGraphics = function() {
       var i, url, _i, _results;
-      url = 'http://raw.github.com/zinodaur/zultrax/master/';
+      url = '';
       this.graphics['resources/player-ship.png'] = new Image();
       this.graphics['resources/player-ship.png'].src = url + 'resources/player-ship.png';
       this.graphics['resources/asteroid.png'] = new Image();
@@ -286,7 +279,7 @@
     };
 
     Frame.prototype.physicalCollide = function(partner1, partner2) {
-      var circle, d, dampeningFactor, newVelX1, newVelX2, newVelY1, newVelY2, nx, ny, p, rect, xdist, ydist;
+      var circle, d, dampeningFactor, dist, magnitude, newVelX1, newVelX2, newVelY1, newVelY2, nx, ny, p, projectionx, projectiony, rect, xdist, ydist;
       dampeningFactor = 0.5;
       if (partner1.hitboxType === RECTANGLE || partner2.hitboxType === RECTANGLE) {
         if (partner1.hitboxType === RECTANGLE) {
@@ -344,10 +337,16 @@
         newVelY1 = partner1.yVelocity - p * partner2.mass * ny;
         newVelX2 = partner2.xVelocity + p * partner1.mass * nx;
         newVelY2 = partner2.yVelocity + p * partner1.mass * ny;
-        partner1.x += newVelX1 * 2;
-        partner1.y += newVelY1 * 2;
-        partner2.x += newVelX2 * 2;
-        partner2.y += newVelY2 * 2;
+        partner1.physics(-1);
+        partner2.physics(-1);
+        if (this.doesCollideWith(partner1, partner2)) {
+          dist = Math.sqrt(Math.pow(partner1.x - partner2.x, 2) + Math.pow(partner1.y - partner2.y, 2));
+          projectionx = (partner1.x - partner2.x) / dist;
+          projectiony = (partner1.y - partner2.y) / dist;
+          magnitude = (partner1.radius + partner2.radius) - dist;
+          partner2.x += projectionx * magnitude;
+          partner2.y += projectiony * magnitude;
+        }
         partner1.xVelocity = newVelX1 * dampeningFactor;
         partner1.yVelocity = newVelY1 * dampeningFactor;
         partner2.xVelocity = newVelX2 * dampeningFactor;
@@ -599,9 +598,7 @@
       }
     };
 
-    Player.prototype.damage = function(damageTaken) {
-      return this.animation.animateShield = true;
-    };
+    Player.prototype.damage = function(damageTaken) {};
 
     Player.prototype.run = function(elapsedTime) {
       var dist;
@@ -652,7 +649,7 @@
     };
 
     Player.prototype.hasCollided = function(partner) {
-      console.log(partner.id);
+      this.animation.animateShield = true;
       if (partner.id === 'asteroid') {
         return this.damage(0.5);
       }
@@ -756,7 +753,6 @@
     PlayerAnimation.prototype.draw = function(context) {
       var imgHeight, imgWidth;
       if (this.animateShield) {
-        console.log('Sheild is animated!');
         context.globalAlpha = 0.5;
         context.drawImage(this.graphics['resources/shieldAnimation/shield-' + this.shieldImageIndex + '.png'], this.player.x - this.player.radius * 1.26, this.player.y - this.player.radius * 1.26, imgWidth = 1.26 * this.player.radius * 2, imgHeight = 1.26 * this.player.radius * 2);
         context.globalAlpha = 1;
@@ -822,6 +818,14 @@
     return Missile;
 
   })(Mobile);
+
+  pointWithin = function(x, xa, xb) {
+    return x > xa && x < xb;
+  };
+
+  pointInRect = function(x1, y1, rectx, recty, halfrectwid, halfrectlen) {
+    return (rectx - halfrectwid < x1 && x1 < (rectx + halfrectwid)) && (recty - halfrectlen < y1 && y1 < (recty + halfrectlen));
+  };
 
   start = function(canvas) {
     window.game = new Game(canvas);
