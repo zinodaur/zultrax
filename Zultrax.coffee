@@ -160,10 +160,25 @@ class Frame
                                         @collide(entity, partner)
 
 
+                 #Removes entities in the map that are marked as dead
+
+                splices = 0
+
+                for i in [0...@map.length]
+
+                        if i < @map.length - splices
+
+                                if not @map[i].alive
+
+                                        @map.splice(i, 1)
+
+                                        i-=1
+
+                                        splices++
+
 
                 #Removes dead entities from the map
-                @map = (entity for entity in @map when entity.alive)
-
+                #@map = @map.filter((x)-> x.alive)
                 @draw(context)
                 entity.draw(context) for entity in @map
 
@@ -783,6 +798,7 @@ class Bullet extends Mobile
                 @damage = 5
 
 
+
         #collide: Entity -> void
         collide: (partner) ->
                 if partner.id isnt 'player'
@@ -795,6 +811,7 @@ class Bullet extends Mobile
                 context.fill()
 
         run: (elapsedTime) ->
+
                 @physics(elapsedTime)
 
 
